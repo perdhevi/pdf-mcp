@@ -1,0 +1,45 @@
+# Full stack: Qdrant + pdf-mcp (HTTP transport). Ollama runs on the host.
+#   docker compose up -d --build
+#   MCP endpoint:  http://localhost:8765/mcp
+#   Qdrant UI:     http://localhost:6333/dashboard
+# For Qdrant only (local `uv run` mode):  docker compose up -d qdrant
+services:
+  qdrant:
+    image: qdrant/qdrant:latest   # pin a release tag for production
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./data/qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  pdf-mcp:
+    build: .
+    depends_on:
+      - qdrant
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./data:/data                                # registry (SQLite)
+      # PDFs: <inbox>/<CUSTOMER>/*.pdf. Set HOST_INBOX_DIR in .env to use a folder outside the project.
+      - ${HOST_INBOX_DIR:-./data/inbox}:/inbox
+    environment:
+      PDF_MCP_INBOX_DIR: /inbox
+      PDF_MCP_QDRANT_URL: http://qdrant:6333
+      PDF_MCP_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      PDF_MCP_PUBLIC_BASE_URL: http://localhost:8765
+      PDF_MCP_OCR_LANG: eng+ind
+      PDF_MCP_WATCH_POLLING: "true"   # bind mounts on Windows don't deliver file events
+      # Model overrides, e.g.:
+      # PDF_MCP_EMBED_MODEL: bge-m3
+      # PDF_MCP_LLM_MODEL: qwen3-vl:8b
+      # PDF_MCP_OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # Slow machine? Skip qwen3 "thinking" and/or use a smaller answer model:
+      # PDF_MCP_OLLAMA_THINK: "false"
+      # PDF_MCP_LLM_MODEL: qwen3:4b
+      # Vector-chart detection threshold (drawing ops per page; 0 = off):
+      # PDF_MCP_VISION_VECTOR_MIN_DRAWINGS: "12"
+      PDF_MCP_LLM_MODEL: qwen3:8b
+      PDF_MCP_OLLAMA_THINK: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

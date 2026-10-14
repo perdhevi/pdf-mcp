@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "pdf-mcp": {
+      "type": "http",
+      "url": "http://localhost:8765/mcp",
+      "connectionTimeout": 10000,
+      "requestTimeout": 600000
+    }
+  }
+}
