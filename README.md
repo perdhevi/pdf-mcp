@@ -1,11 +1,14 @@
-# pdf-mcp
+# mcp-pdf
+
+Repository: [github.com/perdhevi/mcp-pdf](https://github.com/perdhevi/mcp-pdf). The Python package, CLI command
+and MCP server name are all `pdf-mcp`.
 
 ## TL;DR: try it in Docker
 
 You need Docker Desktop and [Ollama](https://ollama.com) on the host. Everything else runs in containers.
 
 ```powershell
-git clone <repo-url> mcp-pdf && cd mcp-pdf
+git clone https://github.com/perdhevi/mcp-pdf.git && cd mcp-pdf
 
 # 1. Models (Ollama runs on the host and uses your GPU)
 ollama pull bge-m3          # embeddings
@@ -102,7 +105,8 @@ MCP client ──(stdio | streamable HTTP)──► tools ──► retrieve(cus
 ## Quick start on Windows (local `uv` + Qdrant in Docker)
 
 ```powershell
-cd C:\AI\mcp-pdf
+git clone https://github.com/perdhevi/mcp-pdf.git
+cd mcp-pdf
 # 1. Prerequisites
 winget install astral-sh.uv
 winget install UB-Mannheim.TesseractOCR        # then add Indonesian: tick "ind" in the installer, or copy ind.traineddata
@@ -179,12 +183,13 @@ Network shares work, but file-change events are unreliable on them. Keep `PDF_MC
   "mcpServers": {
     "pdf-mcp": {
       "command": "uv",
-      "args": ["--directory", "C:\\AI\\mcp-pdf", "run", "pdf-mcp", "serve"]
+      "args": ["--directory", "C:\\path\\to\\mcp-pdf", "run", "pdf-mcp", "serve"]
     }
   }
 }
 ```
-`.env` is read from the working directory, so with `uv --directory` it is picked up from the project folder.
+Replace `C:\path\to\mcp-pdf` with the folder you cloned into. `.env` is read from the working directory, so with
+`uv --directory` it is picked up from the project folder.
 
 **Streamable HTTP** (harness-loop-graph, LangGraph, remote agents):
 
