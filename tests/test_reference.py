@@ -102,3 +102,39 @@ def test_rebuild_on_normalization_change(app, invoices):
     reg = Registry(app.s.registry_path)
     assert reg.find_text("inv20240781")
     reg.close()
+
+
+@pytest.fixture
+def lookalikes(app):
+    acme = app.s.inbox / "ACME"
+    _pdf(acme / "invoice_0781.pdf", "TAX INVOICE\nInvoice No: INV-2024-0781\nTotal: IDR 12.500.000")
+    _pdf(acme / "invoice_0718.pdf", "TAX INVOICE\nInvoice No: INV-2024-0718\nTotal: IDR 3.200.000")
+    _pdf(acme / "delivery_note.pdf", "Delivery note 10781. Goods shipped to ACME warehouse.")
+    _pdf(acme / "spaced_invoice.pdf", "Payment received for invoice INV 2024 0781.")
+    app.sync()
+
+
+def _files(app, reference):
+    return {m["filename"] for m in rag.find_reference(app, reference, customer="ACME")["matches"]}
+
+
+def test_near_identical_numbers_do_not_cross_match(app, lookalikes):
+    assert "invoice_0781.pdf" in _files(app, "INV-2024-0781")
+    assert "invoice_0718.pdf" not in _files(app, "INV-2024-0781")
+    assert "invoice_0718.pdf" in _files(app, "INV-2024-0718")
+    assert "invoice_0781.pdf" not in _files(app, "INV-2024-0718")
+
+
+def test_partial_number_matches_longer_numbers(app, lookalikes):
+    # Substring search: a short partial number also hits unrelated longer numbers.
+    assert "delivery_note.pdf" in _files(app, "0781")
+    assert "delivery_note.pdf" not in _files(app, "INV-2024-0781")
+
+
+def test_space_only_separators_are_not_normalised(app, lookalikes):
+    # Known limitation: only - / _ . : # count as separators, so "INV 2024 0781" (spaces only)
+    # is not found by INV-2024-0781. Changing this is a deliberate decision: update this test,
+    # normalize_ref, NORM_VERSION and the README together.
+    assert normalize_ref("INV 2024 0781") == "inv 2024 0781"
+    assert "spaced_invoice.pdf" not in _files(app, "INV-2024-0781")
+    assert "spaced_invoice.pdf" in _files(app, "INV 2024 0781")  # indexed; only the separator differs
