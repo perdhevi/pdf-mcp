@@ -1,5 +1,7 @@
 # pdf-mcp
 
+[![tests](https://github.com/perdhevi/mcp-pdf/actions/workflows/tests.yml/badge.svg)](https://github.com/perdhevi/mcp-pdf/actions/workflows/tests.yml)
+
 Repository: [github.com/perdhevi/pdf-mcp](https://github.com/perdhevi/pdf-mcp). The Python package, CLI command
 and MCP server name are all `pdf-mcp`.
 
