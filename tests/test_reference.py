@@ -138,3 +138,25 @@ def test_space_only_separators_are_not_normalised(app, lookalikes):
     assert normalize_ref("INV 2024 0781") == "inv 2024 0781"
     assert "spaced_invoice.pdf" not in _files(app, "INV-2024-0781")
     assert "spaced_invoice.pdf" in _files(app, "INV 2024 0781")  # indexed; only the separator differs
+
+
+def test_whole_identifier_outranks_substring(app):
+    acme = app.s.inbox / "ACME"
+    # A longer, different number that contains the query as a substring, mentioned three times.
+    _pdf(acme / "statement.pdf", "Refs INV-2024-07812, INV-2024-07812 and INV-2024-07812.")
+    _pdf(acme / "invoice.pdf", "TAX INVOICE\nInvoice No: INV-2024-0781")
+    app.sync()
+    res = rag.find_reference(app, "INV-2024-0781", customer="ACME")
+    assert [m["filename"] for m in res["matches"]] == ["invoice.pdf", "statement.pdf"]
+
+
+def test_filename_bonus_needs_whole_match(app):
+    acme = app.s.inbox / "ACME"
+    _pdf(acme / "ACME_delivery_note_10781.pdf", "Delivery note 10781. Goods shipped.")
+    _pdf(acme / "invoice.pdf", "Invoice No: INV-2024-0781\nPlease quote INV-2024-0781 when paying.")
+    app.sync()
+    res = rag.find_reference(app, "0781", customer="ACME")
+    assert [m["filename"] for m in res["matches"]][0] == "invoice.pdf"
+    # A separator counts as a boundary: 0781 is a whole segment of INV-2024-0781, but not of 10781.
+    whole = {m["filename"]: m["whole_matches"] for m in res["matches"]}
+    assert whole == {"invoice.pdf": 2, "ACME_delivery_note_10781.pdf": 0}

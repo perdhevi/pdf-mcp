@@ -254,6 +254,7 @@ and is built automatically the first time an existing registry is opened.
 - Separators and case are ignored: `INV-2024-0781` = `inv/2024/0781` = `INV20240781`.
 - Partial numbers match: `0781` finds `INV-2024-0781`. At least 3 characters are required.
 - Short partial numbers can also match longer, unrelated numbers: `0781` matches `10781` too.
+  Whole matches rank first: `0781` counts as whole in `INV-2024-0781` (a separator is a boundary), not in `10781`.
 - Spaces alone are not treated as separators: `INV 2024 0781` does not match `INV-2024-0781`.
 - Each result lists the customer, document, pages, occurrence count, a snippet, and a link to the first matching page.
 - Searching across customers is **opt-in**. Set `PDF_MCP_ALLOW_GLOBAL_SEARCH=true` to expose

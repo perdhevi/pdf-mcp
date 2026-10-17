@@ -121,11 +121,24 @@ def _ref_snippet(text: str, pat: re.Pattern, width: int = 90) -> str:
     return ("…" if a else "") + s + ("…" if b < len(text) else "")
 
 
+def _whole_count(text: str, pat: re.Pattern) -> int:
+    """Matches of ``pat`` in the original text not flanked by a letter or digit.
+    Checked on the original text: normalising glues labels on ("No: INV-1" -> "noinv1")."""
+    n = 0
+    for m in pat.finditer(text):
+        before = text[m.start() - 1] if m.start() else ""
+        after = text[m.end()] if m.end() < len(text) else ""
+        if not before.isalnum() and not after.isalnum():
+            n += 1
+    return n
+
+
 def find_reference(app: App, reference: str, customer: str | None = None, limit: int = 20) -> dict:
     """Exact lookup of an identifier (invoice / PO / contract number) in page text.
 
     Separators are ignored: INV-2024-0781 == INV/2024/0781 == INV20240781. Substrings match too
-    (searching 0781 finds INV-2024-0781). ``customer=None`` searches every customer."""
+    (searching 0781 finds INV-2024-0781), but whole-identifier matches rank above substring-only ones.
+    ``customer=None`` searches every customer."""
     norm = normalize_ref(" ".join(reference.split()))
     if len(norm) < 3:
         raise ValueError("reference must be at least 3 characters")
@@ -148,10 +161,17 @@ def find_reference(app: App, reference: str, customer: str | None = None, limit:
             "title": rec.title,
             "pages": [p for p, _ in pages],
             "occurrences": sum(len(pat.findall(t or "")) for _, t in pages),
+            "whole_matches": sum(_whole_count(t or "", pat) for _, t in pages),
             "snippet": _ref_snippet(first_text, pat),
             "file_url": app.file_url(rec, first_page),
         })
-    # Documents with the reference in the filename first, then by occurrences.
-    matches.sort(key=lambda m: (norm not in normalize_ref(m["filename"]), -m["occurrences"]))
+    # Whole-identifier matches first (the reference is not part of a longer number or word), then
+    # substring-only matches. Within whole matches, a filename containing the reference ranks first.
+    def rank(m):
+        whole = m["whole_matches"] > 0
+        in_name = whole and norm in normalize_ref(m["filename"])
+        return (not whole, not in_name, -m["occurrences"])
+
+    matches.sort(key=rank)
     return {"reference": reference, "normalized": norm, "total_documents": len(matches),
             "customers": sorted({m["customer_code"] for m in matches}), "matches": matches[:limit]}
