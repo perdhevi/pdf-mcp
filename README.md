@@ -1,6 +1,7 @@
 # pdf-mcp
 
 [![tests](https://github.com/perdhevi/mcp-pdf/actions/workflows/tests.yml/badge.svg)](https://github.com/perdhevi/mcp-pdf/actions/workflows/tests.yml)
+[![M8ven Score](https://m8ven.ai/badge/mcp/perdhevi-mcp-pdf-15dlhs?v=10e470e37d02dfd0fc0185f42e7fdc30)](https://m8ven.ai/mcp/perdhevi-mcp-pdf-15dlhs?s=readme)
 
 Repository: [github.com/perdhevi/pdf-mcp](https://github.com/perdhevi/pdf-mcp). The Python package, CLI command
 and MCP server name are all `pdf-mcp`.
