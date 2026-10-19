@@ -39,6 +39,11 @@ New PDFs dropped in inbox/<CUSTOMER>/ are ingested automatically; `ingest_pdf` i
 Always give the user the `file_url` when they need the original document."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
+# Write tools: all act only on this server's own inbox/index (closed world).
+INGEST = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
+# reindex drops index entries for PDFs no longer in the inbox, and force=true rebuilds embeddings.
+REINDEX = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=True, open_world_hint=False)
+DELETE = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=True, open_world_hint=False)
 
 
 def _doc_dict(app: App, rec: DocRecord) -> dict[str, Any]:
@@ -146,7 +151,7 @@ def create_server(app: App) -> MCPServer:
             return rag.find_reference(app, reference, customer=None, limit=max(1, min(limit, 100)))
 
     # ------------------------------------------------------------ management
-    @mcp.tool(annotations=ToolAnnotations(destructive_hint=False, idempotent_hint=True))
+    @mcp.tool(annotations=INGEST)
     def ingest_pdf(path: str, customer_code: str | None = None, wait: bool = True, force: bool = False) -> dict[str, Any]:
         """Ingest a PDF that is on the server's filesystem.
 
@@ -166,7 +171,7 @@ def create_server(app: App) -> MCPServer:
             return {"queued": True, "path": str(p.resolve())}
         return _doc_dict(app, app.ingest_file(p, force=force))
 
-    @mcp.tool(annotations=ToolAnnotations(destructive_hint=False, idempotent_hint=True))
+    @mcp.tool(annotations=REINDEX)
     def reindex(customer_code: str | None = None, force: bool = False) -> dict[str, Any]:
         """Rescan the inbox (one customer or all) in the background: ingest new/changed PDFs, drop deleted ones.
         force=true re-extracts and re-embeds everything (slow; use after changing models)."""
@@ -174,7 +179,7 @@ def create_server(app: App) -> MCPServer:
         app.enqueue(("sync", cust, force))
         return {"queued": True, "customer_code": cust, "force": force}
 
-    @mcp.tool(annotations=ToolAnnotations(destructive_hint=True))
+    @mcp.tool(annotations=DELETE)
     def delete_document(customer_code: str, doc_id: str, delete_file: bool = False) -> dict[str, Any]:
         """Remove a document from the index. delete_file=true also deletes the PDF from the inbox
         (otherwise the watcher would re-ingest it on the next reindex)."""
